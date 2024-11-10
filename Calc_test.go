@@ -26,3 +26,27 @@ func TestValidateInput(t *testing.T) {
 		}
 	}
 }
+func TestCalc(t *testing.T) {
+	type Test struct {
+		input    string
+		expected float64
+	}
+	args := []Test{
+		{"2+2", 4},
+		{"2*2+2", 6},
+		{"2+(2+2)", 6},
+		{"2+(2+(2+(2))", 0},
+		{"1/2", 0.5},
+		{"a2+2", 0},
+		{"2:2", 1}, //0 потому что деление должно быть через "/"
+		{"2+2+", 0},
+		{"", 0},
+	}
+	for _, input := range args {
+		got, _ := Calc(input.input)
+		expected := input.expected
+		if got != expected {
+			t.Errorf("Calc(%s) == %g, want %g", input.input, got, expected)
+		}
+	}
+}

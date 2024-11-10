@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -11,8 +10,9 @@ import (
 )
 
 var (
-	invalidInput  = errors.New("invalid input")
-	devidedByZero = errors.New("devided by zero")
+	invalidInput           = errors.New("invalid input")
+	devidedByZero          = errors.New("devided by zero")
+	invalidBracketsInInput = errors.New("brackets amount is invalid")
 )
 
 func ValidateInput(expression string) bool {
@@ -78,10 +78,38 @@ func Calculate(expression []string) (float64, error) {
 
 	return strconv.ParseFloat(strings.Join(expression, ""), 64)
 }
+
+// BracketsIndex возвращает индекс первой открывающей скобки и закрывающей ее скобки.
+//
+// Если скобок нет, то возвращает 0, 0, nil
+// Если возникает ошибка, то возвращает -1, -1, error
+func BracketsIndex(expression string) (int, int, error) {
+	counter := -1
+	pos1 := strings.Index(expression, "(")
+	if pos1 == -1 {
+		return 0, 0, nil
+	}
+	for i := pos1 + 1; i < len(expression); i++ {
+		switch string(expression[i]) {
+		case "(":
+			counter--
+			break
+		case ")":
+			counter++
+			break
+		}
+		if counter == 0 {
+			return pos1, i, nil
+		}
+	}
+	return -1, -1, invalidBracketsInInput
+}
 func RecursiveBracketCalculator(expression string) (string, error) {
-	re := regexp.MustCompile(`\(.*\)`)
-	match := re.FindString(expression)
-	if match == "" {
+	pos1, pos2, err := BracketsIndex(expression)
+	if err != nil {
+		return "", err
+	}
+	if pos1 == 0 && pos2 == 0 {
 		tokens := tokenize(expression)
 		result, err := Calculate(tokens)
 		if err != nil {
@@ -89,16 +117,12 @@ func RecursiveBracketCalculator(expression string) (string, error) {
 		}
 		return fmt.Sprintf("%f", result), err
 	} else {
-		result, err := RecursiveBracketCalculator(match[1 : len(match)-1])
+		exp, err := RecursiveBracketCalculator(expression[pos1+1 : pos2])
 		if err != nil {
 			return "", err
 		}
-		pos1 := strings.Index(expression, "(")
-		pos2 := strings.LastIndex(expression, ")")
-		expression = expression[:pos1] + result + expression[pos2+1:]
-		tokens := tokenize(expression)
-		result1, err := Calculate(tokens)
-		return fmt.Sprintf("%f", result1), err
+		expression = expression[:pos1] + exp + expression[pos2+1:]
+		return RecursiveBracketCalculator(expression)
 	}
 }
 func Calc(expression string) (float64, error) {
@@ -134,4 +158,13 @@ func tokenize(expression string) []string {
 		tokens = append(tokens, number.String())
 	}
 	return tokens
+}
+
+// Main здесь создан исключительно для тестов!!!
+func main() {
+	answer, err := Calc("2:2")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(answer)
 }
